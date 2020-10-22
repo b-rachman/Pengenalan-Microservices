@@ -21,8 +21,11 @@ func main() {
 			Port:     "3306",
 			User:     "root",
 			Password: "12345",
-			DbName:   "pengenalan-microservice",
+			DbName:   "pengenalan_microservice",
 			Config:   "charset=utf8&parseTime=True&loc=Local",
+		},
+		Auth: config.Auth{
+			Host: "http://localhost:8001",
 		},
 	}
 
@@ -33,7 +36,17 @@ func main() {
 	}
 
 	router := mux.NewRouter()
-	router.Handle("/add-menu", http.HandlerFunc(handler.AddMenu))
+
+	menuHandler := handler.MenuHandler{
+		Db: db,
+	}
+
+	authHandler := handler.AuthHandler{
+		Config: cfg.Auth,
+	}
+
+	router.Handle("/add-menu", authHandler.ValidateAdmin(menuHandler.AddMenu))
+	router.Handle("/menu", http.HandlerFunc(menuHandler.GetMenu))
 	fmt.Println("Menu Service Listern to :8000")
 	log.Panic(http.ListenAndServe(":8000", router))
 }
@@ -49,6 +62,6 @@ func initDB(dbConfig config.Database) (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	fmt.Println("Connected to Database")
 	return db, nil
 }
